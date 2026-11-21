@@ -1,5 +1,7 @@
 package com.ceyentra.sm.service.impl;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import com.ceyentra.sm.dto.UserDTO;
 import com.ceyentra.sm.dto.web.request.MealOrderReqDTO;
 import com.ceyentra.sm.dto.web.request.ReservationApproveReqDTO;
@@ -500,8 +502,9 @@ public class ReservationServiceImpl implements ReservationService {
         List<SessionCreateParams.LineItem> lineItems = mealOrderDetails.stream().map(mealOrderDetail -> SessionCreateParams.LineItem.builder()
                 .setQuantity(mealOrderDetail.getQty().longValue())
                 .setPriceData(SessionCreateParams.LineItem.PriceData.builder()
-                        .setCurrency("USD")
-                        .setUnitAmount(mealOrderDetail.getPrice().longValue())
+                        .setCurrency("lkr")
+                        .setUnitAmount(new BigDecimal(mealOrderDetail.getPrice().toString())
+                                .movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact())
                         .setProductData(
                                 SessionCreateParams.LineItem.PriceData.ProductData.builder()
                                         .setName(mealOrderDetail.getMeal().getName())
