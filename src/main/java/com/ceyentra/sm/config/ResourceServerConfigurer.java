@@ -23,6 +23,8 @@ public class ResourceServerConfigurer extends ResourceServerConfigurerAdapter {
 
         http
                 .authorizeRequests()
+                .antMatchers("/v1/dashboard/operations").hasAnyRole("ADMIN", "STAFF")
+                .antMatchers("/v1/dashboard/me").hasRole("CUSTOMER")
                 .antMatchers("/v1/admin/payments", "/v1/admin/payments/**").hasAnyRole("ADMIN", "STAFF")
                 .antMatchers("/v1/admin/reports", "/v1/admin/reports/**").hasRole("ADMIN")
                 .anyRequest()
