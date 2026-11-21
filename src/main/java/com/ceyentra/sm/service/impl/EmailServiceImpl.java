@@ -5,6 +5,7 @@
 package com.ceyentra.sm.service.impl;
 
 import com.ceyentra.sm.constant.EmailTemplateConstant;
+import com.ceyentra.sm.constant.DecisionEmail;
 import com.ceyentra.sm.dto.UserDTO;
 import com.ceyentra.sm.entity.MealOrderEntity;
 import com.ceyentra.sm.entity.TableReservationEntity;
@@ -18,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.mail.MessagingException;
-import java.text.SimpleDateFormat;
+
 
 @Service
 @Transactional
@@ -68,41 +69,20 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendUserMealOrderOperationalStatusChangeEmail(UserDTO userDTO, MealOrderEntity mealOrderEntity, MealOperationalStatus mealOperationalStatus) throws MessagingException {
-        log.info("start sendUserMealOrderOperationalStatusChangeEmail @Param userDTO : {}", userDTO);
-        try {
-            if (mealOperationalStatus.equals(MealOperationalStatus.ACCEPTED)) {
-                emailSender.sendSimpleEmail(userDTO.getEmail(),
-                        EmailTemplateConstant.SEND_MEAL_ORDER_STATUS_SUBJECT,
-                        "<html><body><p></</body></html>");
-            } else {
-                emailSender.sendSimpleEmail(userDTO.getEmail(),
-                        EmailTemplateConstant.SEND_MEAL_ORDER_STATUS_SUBJECT,
-                        emailTemplateConstant.mealReservationRejectedTemplate(mealOrderEntity));
-            }
-        } catch (Exception e) {
-            log.error("function sendUserMealOrderOperationalStatusChangeEmail {}", e.getMessage(), e);
-            throw e;
+    public void sendUserMealOrderOperationalStatusChangeEmail(UserDTO user, MealOrderEntity order,
+                                                              MealOperationalStatus status, String note) throws MessagingException {
+        if (status == MealOperationalStatus.ACCEPTED || status == MealOperationalStatus.DECLINED) {
+            DecisionEmail email = DecisionEmail.forOrder(order, status == MealOperationalStatus.ACCEPTED, note);
+            emailSender.sendSimpleEmail(user.getEmail(), email.getSubject(), email.getHtml());
         }
     }
 
     @Override
-    public void sendUserTableReservationOperationalStatusChangeEmail(UserDTO userDTO, TableReservationEntity entity, TableReservationOperationalStatus status) throws MessagingException {
-        log.info("start sendUserTableReservationOperationalStatusChangeEmail @Param userDTO : {}", userDTO);
-        try {
-            if (status.equals(TableReservationOperationalStatus.APPROVED)) {
-                emailSender.sendSimpleEmail(userDTO.getEmail(),
-                        EmailTemplateConstant.SEND_MEAL_ORDER_STATUS_SUBJECT,
-                        emailTemplateConstant.tableReservationApprovedTemplate(entity));
-            } else {
-                emailSender.sendSimpleEmail(userDTO.getEmail(),
-                        EmailTemplateConstant.SEND_MEAL_ORDER_STATUS_SUBJECT,
-                        emailTemplateConstant.tableReservationDeclinedTemplate(entity));
-            }
-        } catch (Exception e) {
-            log.error("function sendUserTableReservationOperationalStatusChangeEmail {}", e.getMessage(), e);
-            throw e;
+    public void sendUserTableReservationOperationalStatusChangeEmail(UserDTO user, TableReservationEntity reservation,
+                                                                     TableReservationOperationalStatus status) throws MessagingException {
+        if (status == TableReservationOperationalStatus.APPROVED || status == TableReservationOperationalStatus.DECLINED) {
+            DecisionEmail email = DecisionEmail.forReservation(reservation, status == TableReservationOperationalStatus.APPROVED);
+            emailSender.sendSimpleEmail(user.getEmail(), email.getSubject(), email.getHtml());
         }
     }
-
 }

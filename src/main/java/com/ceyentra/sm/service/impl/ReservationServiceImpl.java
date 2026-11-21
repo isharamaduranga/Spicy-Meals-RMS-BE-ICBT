@@ -459,7 +459,7 @@ public class ReservationServiceImpl implements ReservationService {
                     try {
                         emailService.sendUserMealOrderOperationalStatusChangeEmail(UserDTO.builder()
                                 .email(mealOrderEntity.get().getUserEntity().getEmail())
-                                .build(), mealOrderEntity.get(), reqDTO.getMealStatus());
+                                .build(), mealOrderEntity.get(), reqDTO.getMealStatus(), reqDTO.getNote());
                     } catch (MessagingException ex) {
                         throw new RuntimeException(ex);
                     }

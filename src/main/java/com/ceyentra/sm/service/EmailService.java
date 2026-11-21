@@ -14,7 +14,7 @@ public interface EmailService {
 
     void sendUserNewPasswordEmail(UserDTO userDTO) throws MessagingException;
 
-    void sendUserMealOrderOperationalStatusChangeEmail(UserDTO userDTO, MealOrderEntity mealOrderEntity, MealOperationalStatus mealOperationalStatus) throws MessagingException;
+    void sendUserMealOrderOperationalStatusChangeEmail(UserDTO userDTO, MealOrderEntity mealOrderEntity, MealOperationalStatus mealOperationalStatus, String note) throws MessagingException;
 
     void sendUserTableReservationOperationalStatusChangeEmail(UserDTO userDTO, TableReservationEntity entity, TableReservationOperationalStatus status) throws MessagingException;
 }
