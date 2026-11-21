@@ -7,6 +7,9 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.*;
 
 @Repository
@@ -15,6 +18,7 @@ import java.util.*;
 public class FinanceRepository {
     private final NamedParameterJdbcTemplate jdbc;
     private static final int PAGE_SIZE = 20;
+    static final ZoneOffset REPORT_OFFSET = ZoneOffset.ofHoursMinutes(5, 30);
     private static final String AMOUNT = "CAST(p.price AS DECIMAL(18,2))";
     private static final String JOINS = " FROM payment p"
             + " LEFT JOIN meal_order o ON o.id = p.meal_order_id"
@@ -79,5 +83,56 @@ public class FinanceRepository {
                     + " WHERE d.reservation_id=:reservationId ORDER BY d.id", params));
         }
         return Optional.of(payment);
+    }
+
+    public Map<String, Object> report(LocalDate start, boolean yearly) {
+        LocalDate end = yearly ? start.plusYears(1) : start.plusMonths(1);
+        // Hibernate stores UTC timestamps. Filter on the raw column, then group by local business date.
+        MapSqlParameterSource params = new MapSqlParameterSource("start", utcBoundary(start))
+                .addValue("end", utcBoundary(end));
+        String bucket = "DATE_FORMAT(DATE_ADD(created_date, INTERVAL 330 MINUTE), "
+                + (yearly ? "'%Y-%m'" : "'%Y-%m-%d'") + ")";
+        String range = " WHERE created_date >= :start AND created_date < :end GROUP BY period";
+        String sql = "SELECT period, SUM(orders) AS orders, SUM(reservations) AS reservations,"
+                + " SUM(payments) AS payments, SUM(income) AS income, SUM(outstanding) AS outstanding FROM ("
+                + "SELECT " + bucket + " AS period, COUNT(*) AS orders, 0 AS reservations,"
+                + " 0 AS payments, 0 AS income, 0 AS outstanding FROM meal_order" + range
+                + " UNION ALL SELECT " + bucket + " AS period, 0, COUNT(*), 0, 0, 0 FROM tables_reservation" + range
+                + " UNION ALL SELECT " + bucket + " AS period, 0, 0, COUNT(*), " + INCOME + ", "
+                + OUTSTANDING + " FROM payment p" + range + ") activity GROUP BY period ORDER BY period";
+
+        Map<String, Map<String, Object>> activity = new HashMap<>();
+        for (Map<String, Object> row : jdbc.queryForList(sql, params)) {
+            activity.put((String) row.get("period"), row);
+        }
+        List<Map<String, Object>> rows = new ArrayList<>();
+        Map<String, BigDecimal> totals = new LinkedHashMap<>();
+        for (String metric : Arrays.asList("orders", "reservations", "payments", "income", "outstanding")) {
+            totals.put(metric, BigDecimal.ZERO);
+        }
+        for (LocalDate date = start; date.isBefore(end); date = yearly ? date.plusMonths(1) : date.plusDays(1)) {
+            String period = yearly ? date.toString().substring(0, 7) : date.toString();
+            Map<String, Object> row = activity.get(period);
+            if (row == null) {
+                row = new LinkedHashMap<>();
+                row.put("period", period);
+                for (String metric : totals.keySet()) {
+                    row.put(metric, BigDecimal.ZERO);
+                }
+            }
+            for (Map.Entry<String, BigDecimal> metric : totals.entrySet()) {
+                metric.setValue(metric.getValue().add(new BigDecimal(row.get(metric.getKey()).toString())));
+            }
+            rows.add(row);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("rows", rows);
+        result.put("totals", totals);
+        return result;
+    }
+
+    static String utcBoundary(LocalDate date) {
+        return date.atStartOfDay().atOffset(REPORT_OFFSET).withOffsetSameInstant(ZoneOffset.UTC)
+                .toLocalDateTime().toString();
     }
 }
