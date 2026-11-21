@@ -37,7 +37,7 @@ public class EmailServiceImpl implements EmailService {
     //done
     @Override
     public void sendUserOTPEmail(UserDTO userDTO, int OTP) throws MessagingException {
-        log.info("start sendUserOTP @Param OTP : {}", OTP);
+        log.info("Starting password reset OTP email delivery");
         try {
 
             //sending email that contains OTP

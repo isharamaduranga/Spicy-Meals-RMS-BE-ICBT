@@ -210,12 +210,12 @@ public class UserController {
      */
     @Throttling(timeFrameInSeconds = 60, calls = 10)
     @PostMapping(value = "otp/validate", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Object> validateUserOTP(@RequestBody ValidateUserOTPRequestDTO requestDTO) {
+    public ResponseEntity<CommonResponseDTO> validateUserOTP(@RequestBody ValidateUserOTPRequestDTO requestDTO) {
         userOTPService.validateUserOTP(requestDTO.getEmail(), requestDTO.getOtp());
         return new ResponseEntity<>(
-                ResponseDTO.builder()
+                CommonResponseDTO.builder()
                         .success(true)
-                        .data(requestDTO)
+                        .message("OTP verified successfully. You can now reset your password.")
                         .build()
                 , HttpStatus.OK);
     }
